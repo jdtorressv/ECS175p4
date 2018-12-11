@@ -77,6 +77,7 @@ void populateCurves(vector<float> v)
 				Point pt(*(++vpoint)/ NORM, *(++vpoint) / NORM);
 				b1.pointArr.push_back(pt);
 		}
+		b2.k = (int)*(++vpoint);
 		cntrlTotal = (int)*(++vpoint);
 		for (int i = 0; i < cntrlTotal; i++) {
 				Point pt(*(++vpoint)/ NORM, *(++vpoint) / NORM);
