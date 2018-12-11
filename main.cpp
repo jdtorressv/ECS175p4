@@ -10,379 +10,236 @@
 #include <cmath>
 using namespace std;
 
-#define ERROR 1 
-#define NORM 600.0 
+#define ERROR 1
+#define NORM 500.0
 
 /*****************************************************************************/
-/* Classes                            		                             */
+/* Classes                            		                                   */
 /*****************************************************************************/
- 
-class Vertex {
+class Point {
 	public:
-		double x;   
-		double y;  
-		double z; 
-	        double normX;
-		double normY; 
-		double normZ;
-		double red;
-		double green;
-		double blue; 
-		Vertex(double x, double y, double z);
+		float x;
+		float y;
+	  Point(float x, float y);
 };
-
-class Triangle {
-	public: 
-		int vertexA;
-		int vertexB; 
-		int vertexC;
-		Triangle(int vertexA, int vertexB, int vertexC); 
-};
-
-class Normal {
-        public:
-                int VID;
-                double xVal;
-                double yVal;
-                double zVal;
-		Normal(int VID, double xVal, double yVal, double zVal); 
-};
-
-class Polyhedron {
-	public: 
-		vector<Vertex> vArr; 
-		vector<Triangle> triArr; 
-		vector<Normal> normArr; 
-};	
-class CoeffSet {
+class BezSpline {
 	public:
-		float ka;
-		float kd; 
-		float ks;
-	        CoeffSet(float ka, float kd, float ks); 	
+		 vector<Point> pointArr;
+};
+class BSpline {
+	public:
+		vector<Point> pointArr;
+		int k;
 };
 
 /*****************************************************************************/
 /* Globals                                                                   */
 /*****************************************************************************/
 
-int windowID, windowXY, windowXZ, windowYZ;
-vector<Polyhedron> polyArr; 
-float *PixelBufferXY, *PixelBufferXZ, *PixelBufferYZ;
-float *PolygonBufferXY, *PolygonBufferXZ, *PolygonBufferYZ;
+//global variables
+BezSpline bez1, bez2;
+BSpline b1, b2;
+int windowID, windowBez1, windowBez2, windowB1, windowB2;
 
 /*****************************************************************************/
 /* Function Definitions                                                      */
 /*****************************************************************************/
 
 //Constructors
-Vertex::Vertex(double x, double y, double z) : x(x), y(y), z(z) {}
+Point::Point(float x, float y) : x(x), y(y) {}
 
-Triangle::Triangle(int vertexA, int vertexB, int vertexC) : vertexA(vertexA), vertexB(vertexB), vertexC(vertexC) {}
-
-Normal::Normal(int VID, double xVal, double yVal, double zVal) : VID(VID), xVal(xVal), yVal(yVal), zVal(zVal) {}
-
-CoeffSet::CoeffSet(float ka, float kd, float ks) : ka(ka), kd(kd), ks(ks) {}
-
-//Fill appropriate classes with input file specs
-void populatePolyhedronInfo(vector<double> v)
+void populateCurves(vector<float> v)
 {
-        auto vpoint = v.begin();
-
-        int polyTotal = (int)*(vpoint);
-
-        for (int i = 0; i < polyTotal; i++) {
-                Polyhedron poly;
-                polyArr.push_back(poly);
-                int vertices = (int)*(++vpoint);
-
-                for (int j = 0; j < vertices; j++) {
-                        double x = *(++vpoint)/NORM;
-                        double y = *(++vpoint)/NORM;
-                        double z = *(++vpoint)/NORM;
-                        Vertex vertex(x, y, z);
-                        polyArr.at(i).vArr.push_back(vertex);
-                }
-
-                int numTri = (int)*(++vpoint);
-
-                for (int k = 0; k < numTri; k++) {
-                        int first = (int)*(++vpoint);
-                        int second = (int)*(++vpoint);
-                        int third = (int)*(++vpoint);
-                        Triangle triangle(first, second, third);
-                        polyArr.at(i).triArr.push_back(triangle);
-                }
-        }
-}
-void swap(int &first, int &second, int &third) 
-{
-	int temp = first; 
-	first = second;
-        second = third; 
-	third = temp; 	
-
-}
-void crossProduct(int index, int A, int B, int C)
-{
-			double Ux = polyArr.at(index).vArr.at(B).x - polyArr.at(index).vArr.at(A).x;
-                        double Uy = polyArr.at(index).vArr.at(B).y - polyArr.at(index).vArr.at(A).y;
-                        double Uz = polyArr.at(index).vArr.at(B).z - polyArr.at(index).vArr.at(A).z;
-
-                        double Vx = polyArr.at(index).vArr.at(C).x - polyArr.at(index).vArr.at(B).x;
-                        double Vy = polyArr.at(index).vArr.at(C).y - polyArr.at(index).vArr.at(B).y;
-                        double Vz = polyArr.at(index).vArr.at(C).z - polyArr.at(index).vArr.at(B).z;
-
-                        Vertex U(Ux, Uy, Uz);
-                        Vertex V(Vx, Vy, Vz);
-			
-			double Nx = U.y*V.z - U.z*V.y;
-			double Ny = U.z*V.x - U.x*V.z;
-			double Nz = U.x*V.y - U.y*V.x;
-			double mag = sqrt(pow(Nx, 2) + pow(Ny, 2) + pow(Nz, 2)); 
-
-                        Normal surfNormal(B, Nx/mag, Ny/mag, Nz/mag);
-                        polyArr.at(index).normArr.push_back(surfNormal);
-
-}
-void calculateNormals() 
-{
-	for (int i = 0; i < polyArr.size(); i++) {
-		for (int j = 0; j < polyArr.at(i).triArr.size(); j++) {
-			Triangle currTri = polyArr.at(i).triArr.at(j); 
-
-			int A = currTri.vertexA;
-			int B = currTri.vertexB; 
-			int C = currTri.vertexC;
-			
-			crossProduct(i, A, B, C);  
-
-			swap(A, B, C);
-
-			crossProduct(i, A, B, C); 
-
-			swap(A, B, C);
-	
-			crossProduct(i, A, B, C);
+		auto vpoint = v.begin();
+		int bezTotal = (int)*vpoint;
+		if (bezTotal != 2) {
+				cout << "This program only supports two Bezier curve instances\n";
+				exit(ERROR);
 		}
-	}	
-}
-void setNormals()
-{
-        for (int i = 0; i < polyArr.size(); i++) {
-                for (int j = 0; j < polyArr.at(i).vArr.size(); j++) {
-                        int count = 0;
-                        for (int k = 0; k < polyArr.at(i).normArr.size(); k++) {
-                                if (j == polyArr.at(i).normArr.at(k).VID) {
-                                        polyArr.at(i).vArr.at(j).normX += polyArr.at(i).normArr.at(k).xVal;
-                                        polyArr.at(i).vArr.at(j).normY += polyArr.at(i).normArr.at(k).yVal;
-                                        polyArr.at(i).vArr.at(j).normY += polyArr.at(i).normArr.at(k).zVal;
-                                        count++;
-                                }
-                        }
-                        polyArr.at(i).vArr.at(j).normX /= (double)count; 
-                        polyArr.at(i).vArr.at(j).normY /= (double)count;
-                        polyArr.at(i).vArr.at(j).normZ /= (double)count; 
-                }
-        }
-}
-float ComputeIP(CoeffSet coeff, float Ia, float Il, float Vmag, float K, Vertex vecL, float Nx, float Ny, float Nz, Vertex vecR, Vertex vecV, int n)
-{
-	float inten = coeff.ka*Ia + (Il/(Vmag + K))*(coeff.kd*(vecL.x*Nx + vecL.y*Ny + vecL.z*Nz) + coeff.ks*pow((vecR.x*vecV.x + vecR.y*vecV.y + vecR.z*vecV.z), n));
-	if (inten < 0)
-		return 0;
-	else
-		return inten; 
-
-}
-void setIntensities(Vertex lightPt, Vertex viewPt, CoeffSet redC, CoeffSet greenC, CoeffSet blueC, float K, float Ia, float Il, int n)
-{
-	for (int i = 0; i < polyArr.size(); i++) {
-		for (int j = 0; j < polyArr.at(i).vArr.size(); j++) {
-			float x = polyArr.at(i).vArr.at(j).x;
-			float y = polyArr.at(i).vArr.at(j).y;
-			float z = polyArr.at(i).vArr.at(j).z; 
-			
-			//Calculate vectors: reflection r, light l, and viewing v 
-			float Lx = x - lightPt.x; 
-			float Ly = y - lightPt.y; 
-			float Lz = z - lightPt.z; 
-			float Lmag = sqrt(pow(Lx, 2) + pow(Ly, 2) + pow(Lz, 2)); 
-			Vertex vecL(Lx/Lmag, Ly/Lmag, Lz/Lmag); 
-
-			float Vx = viewPt.x - lightPt.x;
-			float Vy = viewPt.y - lightPt.y;
-			float Vz = viewPt.z - lightPt.z; 
-			float Vmag = sqrt(pow(Vx, 2) + pow(Vy, 2) + pow(Vz, 2));
-			Vertex vecV(Vx/Vmag, Vy/Vmag, Vz/Vmag); 
-
-			float Nx = polyArr.at(i).vArr.at(j).normX; 
-                        float Ny = polyArr.at(i).vArr.at(j).normY;
-                        float Nz = polyArr.at(i).vArr.at(j).normZ;
-			float NdotL = Nx*vecL.x + Ny*vecL.y + Nz*vecL.z; 
-			Vertex vecR(2*NdotL*Nx - vecL.x, 2*NdotL*Ny - vecL.y, 2*NdotL*Nz - vecL.z);
-
-			polyArr.at(i).vArr.at(j).red = ComputeIP(redC, Ia, Il, Vmag, K, vecL, Nx, Ny, Nz, vecR, vecV, n); 
-		        polyArr.at(i).vArr.at(j).green = ComputeIP(greenC, Ia, Il, Vmag, K, vecL, Nx, Ny, Nz, vecR, vecV, n);
-			polyArr.at(i).vArr.at(j).blue = ComputeIP(blueC, Ia, Il, Vmag, K, vecL, Nx, Ny, Nz, vecR, vecV, n);
-			
-			cout << "Polyhedron #" << i << ", vertex #" << j << ": (" << polyArr.at(i).vArr.at(j).red << ", " << polyArr.at(i).vArr.at(j).green << ", " << polyArr.at(i).vArr.at(j).blue << ")\n"; 	
+		int cntrlTotal = (int)*(++vpoint);
+		for (int i = 0; i < cntrlTotal; i++) {
+				Point pt(*(++vpoint) / NORM, *(++vpoint) / NORM);
+				bez1.pointArr.push_back(pt);
 		}
-	}				
+		cntrlTotal = (int)*(++vpoint);
+		for (int i = 0; i < cntrlTotal; i++) {
+				Point pt(*(++vpoint)/ NORM, *(++vpoint) / NORM);
+				bez2.pointArr.push_back(pt);
+		}
+		int bTotal = (int)*(++vpoint);
+		if (bezTotal != 2) {
+				cout << "This program only supports two B-Spline curve instances\n";
+				exit(ERROR);
+		}
+		b1.k = (int)*(++vpoint);
+		cntrlTotal = (int)*(++vpoint);
+		for (int i = 0; i < cntrlTotal; i++) {
+				Point pt(*(++vpoint)/ NORM, *(++vpoint) / NORM);
+				b1.pointArr.push_back(pt);
+		}
+		cntrlTotal = (int)*(++vpoint);
+		for (int i = 0; i < cntrlTotal; i++) {
+				Point pt(*(++vpoint)/ NORM, *(++vpoint) / NORM);
+				b2.pointArr.push_back(pt);
+		}
+
+		cout << "Bez1 has points:\n";
+		for (int i = 0; i < bez1.pointArr.size(); i++)
+				cout << "(" << bez1.pointArr.at(i).x << ", " << bez1.pointArr.at(i).y << ")\n";
+		cout << "Bez2 has points:\n";
+		for (int i = 0; i < bez2.pointArr.size(); i++)
+				cout << "(" << bez2.pointArr.at(i).x << ", " << bez2.pointArr.at(i).y << ")\n";
+		cout << "B1 has k: " << b1.k << " and points:\n";
+		for (int i = 0; i < b1.pointArr.size(); i++)
+				cout << "(" << b1.pointArr.at(i).x << ", " << b1.pointArr.at(i).y << ")\n";
+		cout << "B2 has k: " << b2.k << " and points:\n";
+		for (int i = 0; i < b2.pointArr.size(); i++)
+				cout << "(" << b2.pointArr.at(i).x << ", " << b2.pointArr.at(i).y << ")\n";
 }
-inline int roundOff(const double a) {return (int)(a+0.5);}
-void makePix(int x, int y, int pid)
-{
 
-}
-void copyBuffer(int pid)
-{
-
-}
-void clearPixelBuffer()
-{
-
-}
-void clearPolygonBuffer(int pid)
-{
-
-}
-void lineDrawRaster()
-{
-
-}
-
-//Inline function for mainMenu delegates all functionality to sub menus 
-inline void mainMenu(int pid) {;}
-
-//Initializes each of the subwindoes as well as the primary window 
+//Initializes each of the subwindows as well as the primary window
 void init()
-{	
-	if (glutGetWindow() == windowID) 
+{
+	if (glutGetWindow() == windowID)
 		glClearColor(1.0, 1.0, 1.0, 0.0); //Set color to white
-	else 
+	else
         	glClearColor(0.0, 0.0, 0.0, 0.0); //Set color to black
 
         glMatrixMode(GL_PROJECTION);
 }
 
-//XY: All Z values are ignored 
-void drawSceneXY()
+//Draws the lines as specified by the lines via vertex pairs in the input file; XY: All Z values are ignored
+void drawSceneBez1()
 {
-	glClear(GL_COLOR_BUFFER_BIT); 
-        glLoadIdentity();
-	glBegin(GL_LINES);
-		
-		for (int i = 0; i < polyArr.size(); i++) { //For each polyhedron
-			for (int j = 0; j < polyArr.at(i).triArr.size(); j++) { //For each each triangle in the polyhedron 
-				int A = polyArr.at(i).triArr.at(j).vertexA;
-				int B = polyArr.at(i).triArr.at(j).vertexB; 
-				int C = polyArr.at(i).triArr.at(j).vertexC;
-			
-				
-				float x1 = polyArr.at(i).vArr.at(A).x;
-				float y1 = polyArr.at(i).vArr.at(A).y;
+		glClear(GL_COLOR_BUFFER_BIT);
+  	glLoadIdentity();
+		glBegin(GL_LINES);
 
-                                float x2 = polyArr.at(i).vArr.at(B).x;
-                                float y2 = polyArr.at(i).vArr.at(B).y;
+			glColor3f(.04, .15, 1);
+			glVertex2f(-1,0);
+			glVertex2f(1,0);
+			glVertex2f(0,-1);
+			glVertex2f(0,1);
 
-				float x3 = polyArr.at(i).vArr.at(C).x;
-                                float y3 = polyArr.at(i).vArr.at(C).y;
+		/*	for (int i = 0; i < lArr.size(); i++) { //For each polyhedron
+					for (int j = 1; j < lArr.at(i).size(); j = j+2) { //For each each line in the polyhedron
+					//First vArr entry appears as [6,0,100,200,200,100,200,0,300,200,200,300,200,100,200,400,100,200,0]
+					//First lArr entry appears as [12,1,2,1,3,2,4,3,4,1,5,2,5,3,5,4,5,1,6,2,6,3,6,4,6]
+							float x1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+1);    //X of first point
+            	float y1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+2);    //Y of first point
+            	float x2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+1);   //X of second point
+            	float y2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+2);   //Y of second point
 
-
-				glColor3f(1.0, 1.0, 1.0); 
-				glVertex2f(x1, y1);
-				glVertex2f(x2, y2); 
-                                glVertex2f(x2, y2);
-                                glVertex2f(x3, y3);
-                                glVertex2f(x3, y3);
-                                glVertex2f(x1, y1);
-
+							glColor3f(1.0, 1.0, 1.0);
+							glVertex2f(x1, y1);
+							glVertex2f(x2, y2);
 			}
 		}
+*/
 
-	glEnd(); 
-	glFlush(); 
+	glEnd();
+	glFlush();
 }
-//XZ: All Y values are ignored
-void drawSceneXZ()
-{
-        glClear(GL_COLOR_BUFFER_BIT);
-        glLoadIdentity();
-	glBegin(GL_LINES);
-		 
-                for (int i = 0; i < polyArr.size(); i++) { //For each polyhedron
-                        for (int j = 0; j < polyArr.at(i).triArr.size(); j++) { //For each each triangle in the polyhedron 
-                                int A = polyArr.at(i).triArr.at(j).vertexA;
-                                int B = polyArr.at(i).triArr.at(j).vertexB;
-                                int C = polyArr.at(i).triArr.at(j).vertexC;
-
-
-                                float x1 = polyArr.at(i).vArr.at(A).x;
-                                float z1 = polyArr.at(i).vArr.at(A).z;
-
-                                float x2 = polyArr.at(i).vArr.at(B).x;
-                                float z2 = polyArr.at(i).vArr.at(B).z;
-
-                                float x3 = polyArr.at(i).vArr.at(C).x;
-                                float z3 = polyArr.at(i).vArr.at(C).z;
-
-
-                                glColor3f(1.0, 1.0, 1.0);
-                                glVertex2f(x1, z1);
-                                glVertex2f(x2, z2);
-                                glVertex2f(x2, z2);
-                                glVertex2f(x3, z3);
-                                glVertex2f(x3, z3);
-                                glVertex2f(x1, z1);
-
-                        }
-                }
-
-
-	glEnd(); 
-	glFlush(); 
-}
-//XZ: All X values are ignored
-void drawSceneYZ()
+//Draws the lines as specified by the lines via vertex pairs in the input file; XZ: All Y values are ignored
+void drawSceneBez2()
 {
         glClear(GL_COLOR_BUFFER_BIT);
         glLoadIdentity();
 	glBegin(GL_LINES);
 
-                for (int i = 0; i < polyArr.size(); i++) { //For each polyhedron
-                        for (int j = 0; j < polyArr.at(i).triArr.size(); j++) { //For each each triangle in the polyhedron 
-                                int A = polyArr.at(i).triArr.at(j).vertexA;
-                                int B = polyArr.at(i).triArr.at(j).vertexB;
-                                int C = polyArr.at(i).triArr.at(j).vertexC;
+					glColor3f(.04, .15, 1);
+					glVertex2f(-1,0);
+					glVertex2f(1,0);
+					glVertex2f(0,-1);
+					glVertex2f(0,1);
+					/*
+        	for (int i = 0; i < lArr.size(); i++) { //For each polyhedron
+                	for (int j = 1; j < lArr.at(i).size(); j = j+2) { //For each each line in the polyhedron
+                        	//First vArr entry appears as [6,0,100,200,200,100,200,0,300,200,200,300,200,100,200,400,100,200,0]
+                        	//First lArr entry appears as [12,1,2,1,3,2,4,3,4,1,5,2,5,3,5,4,5,1,6,2,6,3,6,4,6]
+                        	float x1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+1);    //X of first point
+                        	float z1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+3);    //Z of first point
 
-
-                                float y1 = polyArr.at(i).vArr.at(A).y;
-                                float z1 = polyArr.at(i).vArr.at(A).z;
-
-                                float y2 = polyArr.at(i).vArr.at(B).y;
-                                float z2 = polyArr.at(i).vArr.at(B).z;
-
-                                float y3 = polyArr.at(i).vArr.at(C).y;
-                                float z3 = polyArr.at(i).vArr.at(C).z;
-
+                        	float x2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+1);   //X of second point
+                        	float z2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+3);   //Z of second point
 
                                 glColor3f(1.0, 1.0, 1.0);
-                                glVertex2f(y1, z1);
-                                glVertex2f(y2, z2);
-                                glVertex2f(y2, z2);
-                                glVertex2f(y3, z3);
-                                glVertex2f(y3, z3);
-                                glVertex2f(y1, z1);
-
-                        }
-                }
-
-
-	glEnd(); 
-	glFlush(); 
+                                glVertex2f(x1, z1);
+                                glVertex2f(x2, z2);
+                	}
+        	}
+*/
+	glEnd();
+	glFlush();
 }
-//Set up main display 
+//Draws the lines as specified by the lines via vertex pairs in the input file; XZ: All Y values are ignored
+void drawSceneB1()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+        glLoadIdentity();
+				glBegin(GL_LINES);
+
+					glColor3f(.04, .15, 1);
+					glVertex2f(-1,0);
+					glVertex2f(1,0);
+					glVertex2f(0,-1);
+					glVertex2f(0,1);
+					/*
+        	for (int i = 0; i < lArr.size(); i++) { //For each polyhedron
+                	for (int j = 1; j < lArr.at(i).size(); j = j+2) { //For each each line in the polyhedron
+				//First vArr entry appears as [6,0,100,200,200,100,200,0,300,200,200,300,200,100,200,400,100,200,0]
+                        	//First lArr entry appears as [12,1,2,1,3,2,4,3,4,1,5,2,5,3,5,4,5,1,6,2,6,3,6,4,6]
+                        	float y1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+2);    //Y of first point
+                        	float z1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+3);    //Z of first point
+
+                        	float y2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+2);   //Y of second point
+                        	float z2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+3);   //Z of second point
+
+				glColor3f(1.0, 1.0, 1.0);
+                                glVertex2f(y1, z1);
+                                glVertex2f(y2, z2);
+                	}
+        	}
+
+  */
+
+	glEnd();
+	glFlush();
+}
+
+void drawSceneB2()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+        glLoadIdentity();
+				glBegin(GL_LINES);
+
+					glColor3f(.04, .15, 1);
+					glVertex2f(-1,0);
+					glVertex2f(1,0);
+					glVertex2f(0,-1);
+					glVertex2f(0,1);
+
+					/*
+        	for (int i = 0; i < lArr.size(); i++) { //For each polyhedron
+                	for (int j = 1; j < lArr.at(i).size(); j = j+2) { //For each each line in the polyhedron
+				//First vArr entry appears as [6,0,100,200,200,100,200,0,300,200,200,300,200,100,200,400,100,200,0]
+                        	//First lArr entry appears as [12,1,2,1,3,2,4,3,4,1,5,2,5,3,5,4,5,1,6,2,6,3,6,4,6]
+                        	float y1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+2);    //Y of first point
+                        	float z1 = vArr.at(i).at((lArr.at(i).at(j) - 1)*3+3);    //Z of first point
+
+                        	float y2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+2);   //Y of second point
+                        	float z2 = vArr.at(i).at((lArr.at(i).at(j+1) - 1)*3+3);   //Z of second point
+
+				glColor3f(1.0, 1.0, 1.0);
+                                glVertex2f(y1, z1);
+                                glVertex2f(y2, z2);
+                	}
+        	}
+*/
+	glEnd();
+	glFlush();
+}
+//Set up main display
 void background()
 {
         glClear(GL_COLOR_BUFFER_BIT);
@@ -391,78 +248,230 @@ void background()
 }
 //Master display function
 void display()
-{	
+{
 	glutSetWindow(windowID);
-	background(); 
-        glutSetWindow(windowXY);
-        drawSceneXY();
-        glutSetWindow(windowXZ);
-        drawSceneXZ();
-        glutSetWindow(windowYZ);
-        drawSceneYZ();
+	background();
+        glutSetWindow(windowBez1);
+        drawSceneBez1();
+        glutSetWindow(windowBez2);
+        drawSceneBez2();
+        glutSetWindow(windowB1);
+        drawSceneB1();
+				glutSetWindow(windowB2);
+				drawSceneB2();
 }
-//Provide current vertex information for specified polyhedron 
+/*
+//Provide current vertex information for specified polyhedron
 void vertexMenu(int pid)
 {
-	;
+        switch (pid)
+        {
+                case 0: cout << "Present vertices of the octahedron or polhedron 0:\n";
+                        break;
+                case 1: cout << "Present vertices of the tetrahedron or polyhedron 1:\n";
+                        break;
+                case 2: cout << "Present vertices of the hexahedron or polyhedron 2:\n";
+                        break;
+        }
+        for (int i = 1; i < vArr.at(pid).size(); i+=3)
+                cout << "(" << vArr.at(pid).at(i)*NORM << ", " << vArr.at(pid).at(i+1)*NORM << ", " << vArr.at(pid).at(i+2)*NORM << ")\n";
+
 }
-//Translation 
+//Translation
 void translateMenu(int pid)
 {
-	glutPostRedisplay(); 
- 	;	
+        float x, y, z;
+        int vertices = vArr.at(pid).at(0);
+	cout << "Number of vertices is " << vertices << endl;
+        cout << "Please enter the x, y, and z translation values:\n";
+        cin >> x >> y >> z;
+	//Norm is used to normalize world coordinates
+	cout << "After normalization, you entered " << x/NORM << ", " << y/NORM << ", " << z/NORM << endl;
+        for (int i = 0; i < vertices; i++) {
+                vArr.at(pid).at(1+3*i) += x/NORM;
+                vArr.at(pid).at(2+3*i) += y/NORM;
+		vArr.at(pid).at(3+3*i) += z/NORM;
+
+        }
+
+	glutPostRedisplay();
+
+	//Write changes back to file
+	ofstream file;
+        file.open(fileName, std::ofstream::out | std::ofstream::trunc);
+        if (!file) {
+                cerr << "Unable to open file\n";
+                exit(ERROR);   // call system to stop
+        }
+
+        file << vArr.size() << '\n';
+        for (int i = 0; i < vArr.size(); i++) {
+		file << '\n' << vArr.at(i).at(0) << '\n';
+                for (int j = 1; j < vArr.at(i).size(); j+=3)
+                        file << vArr.at(i).at(j)*NORM << " " << vArr.at(i).at(j+1)*NORM << " " << vArr.at(i).at(j+2)*NORM << '\n';
+		file << lArr.at(i).at(0) << '\n';
+		for (int k = 1; k < lArr.at(i).size(); k+=2)
+			file << lArr.at(i).at(k) << " " << lArr.at(i).at(k+1) << '\n';
+        }
 }
 //Scaling
-void scaleMenu(int pid) 
+void scaleMenu(int pid)
 {
+        double scale;
+        int vertices = vArr.at(pid).at(0);
+        double xSum = 0;
+        double ySum = 0;
+	double zSum = 0;
+        double centX, centY, centZ;
 
-        //glutPostRedisplay();
-	;
+        cout << "Please enter the magnitude you'd like to scale by:\n";
+        cin >> scale;
+
+	// Calculate centroids
+        for (int i = 0; i < vertices; i++)
+                xSum += vArr.at(pid).at(1+i*3);
+
+        for (int i = 0; i < vertices; i++)
+                ySum += vArr.at(pid).at(2+i*3);
+
+	for (int i = 0; i < vertices; i++)
+		zSum += vArr.at(pid).at(3+i*3);
+
+	centX = xSum / (double)vertices;
+	centY = ySum / (double)vertices;
+	centZ = zSum / (double)vertices;
+
+        for (int i = 0; i < vertices; i++) {
+                vArr.at(pid).at(1+i*3) = scale*(vArr.at(pid).at(1+i*3) - centX) + centX;
+                vArr.at(pid).at(2+i*3) = scale*(vArr.at(pid).at(2+i*3) - centY) + centY;
+		vArr.at(pid).at(3+i*3) = scale*(vArr.at(pid).at(3+i*3) - centZ) + centZ;
+        }
+
+        glutPostRedisplay();
+
+	//Write changes back to file
+        ofstream file;
+        file.open(fileName, std::ofstream::out | std::ofstream::trunc);
+        if (!file) {
+                cerr << "Unable to open file\n";int scale_menu, rotate_menu, translate_menu, vertex_menu; //For use in graphical menu
+                exit(ERROR);   // call system to stop
+        }
+
+        file << vArr.size() << '\n';
+        for (int i = 0; i < vArr.size(); i++) {
+                file << '\n' << vArr.at(i).at(0) << '\n';
+                for (int j = 1; j < vArr.at(i).size(); j+=3)
+                        file << vArr.at(i).at(j)*NORM << " " << vArr.at(i).at(j+1)*NORM << " " << vArr.at(i).at(j+2)*NORM << '\n';
+                file << lArr.at(i).at(0) << '\n';
+                for (int k = 1; k < lArr.at(i).size(); k+=2)
+                        file << lArr.at(i).at(k) << " " << lArr.at(i).at(k+1) << '\n';
+        }
 }
 void rotateMenu(int pid)
 {
-	
-        //glutPostRedisplay();
-	;
+        float alpha;
+	rotate = true; //Set rotate flag to true
+        int vertices = vArr.at(pid).at(0);
+	cout << "Please enter the x1, y1, z1, x2, y2, and z2 values to define an axis of rotation, followed by the angle of rotation in radians\n";
+	cin >> rx1 >> ry1 >> rz1 >> rx2 >> ry2 >> rz2 >> alpha;
+	rx1 /= NORM;
+	ry1 /= NORM;
+	rz1 /= NORM;
+	rx2 /= NORM;
+	ry2 /= NORM;
+        rz2 /= NORM;
+	float mag = sqrt(pow((rx2 - rx1), 2) + pow((ry2 -ry1), 2) + pow((rz2 - rz1), 2));
+	float a = (rx2 - rx1) / mag;
+	float b = (ry2 -ry1) / mag;
+	float c = (rz2 - rz1) / mag;
+	float d = sqrt(pow(b, 2) + pow(c, 2));
+
+	// Phases are as outlined in the text, i.e. R(theta) = T^-1 * Rx^-1(alpha) * Ry^-1(beta) * Rz(theta) * Ry(beta) * Rx(alpha) * T
+	for (int i = 0; i < vertices; i++) {
+		float oldX, oldY, oldZ, tempX, tempY, tempZ;
+		//Phase 1/7
+		oldX = vArr.at(pid).at(1+i*3) - rx1;
+		oldY = vArr.at(pid).at(2+i*3) - ry1;
+		oldZ = vArr.at(pid).at(3+i*3) - rz1;
+
+		//Phase 2/7
+		tempX = oldX;
+		tempY = (c/d)*oldY + (-1*b/d)*oldZ;
+		tempZ = (b/d)*oldY + (c/d)*oldZ;
+
+		//Phase 3/7
+		oldX = d*tempX - a*tempZ;
+		oldY = tempY;
+		oldZ = a*tempX + d*tempZ;
+
+		//Phase 4/7
+		tempX = oldX*cos(alpha) - oldY*sin(alpha);
+		tempY = oldX*sin(alpha) + oldY*cos(alpha);
+		tempZ = oldZ;
+
+		//Phase 5/7
+		oldX = d*tempX + a*tempZ;
+		oldY = tempY;
+		oldZ = d*tempZ - a*tempX;
+
+		//Phase 6/7
+		tempX = oldX;
+		tempY = (c/d)*oldY + (b/d)*oldZ;
+		tempZ = (c/d)*oldZ - (b/d)*oldY;
+
+		//Phase 7/7
+                vArr.at(pid).at(1+i*3) = tempX + rx1;
+                vArr.at(pid).at(2+i*3) = tempY + ry1;
+                vArr.at(pid).at(3+i*3) = tempZ + rz1;
+	}
+
+        glutPostRedisplay();
+
+	//Write changes back to file
+        ofstream file;
+        file.open(fileName, std::ofstream::out | std::ofstream::trunc);
+        if (!file) {
+                cerr << "Unable to open file\n";
+                exit(ERROR);   // call system to stop
+        }
+
+        file << vArr.size() << '\n';
+        for (int i = 0; i < vArr.size(); i++) {
+                file << '\n' << vArr.at(i).at(0) << '\n';
+                for (int j = 1; j < vArr.at(i).size(); j+=3)
+                        file << vArr.at(i).at(j)*NORM << " " << vArr.at(i).at(j+1)*NORM << " " << vArr.at(i).at(j+2)*NORM << '\n';
+                file << lArr.at(i).at(0) << '\n';
+                for (int k = 1; k < lArr.at(i).size(); k+=2)
+                        file << lArr.at(i).at(k) << " " << lArr.at(i).at(k+1) << '\n';
+        }
+}*/
+void mainMenu(int pid)
+{
+
+
+
 
 }
-/*****************************************************************************/
-/* Main                                                                      */
-/*****************************************************************************/
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
-	if (argc != 20) {
-		cout << "Usage: p3 <Px Py Pz Fx Fy Fz kaR kdR ksR kaG kdG ksG kaB kdB ksB K Ia Il n> \n";
-		exit(ERROR); 
-	}	
-
-	Vertex lightPt(atof(argv[1])/NORM, atof(argv[2])/NORM, atof(argv[3])/NORM);
-	Vertex viewPt(atof(argv[4])/NORM, atof(argv[5])/NORM, atof(argv[6])/NORM);
-	CoeffSet redC(atof(argv[7]), atof(argv[8]), atof(argv[9]));
-        CoeffSet greenC(atof(argv[10]), atof(argv[11]), atof(argv[12]));
-	CoeffSet blueC(atof(argv[13]), atof(argv[14]), atof(argv[15]));
-	float K = atof(argv[16])/NORM; 
-	float Ia = atof(argv[17]); 
-	float Il = atof(argv[18]); 
-	int n = atoi(argv[19]); 
-
+	if (argc != 1) {
+		cout << "Usage: p4\n";
+		exit(ERROR);
+	}
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	glutInitWindowPosition(100, 100); 
-	glutInitWindowSize(800, 800); 
+	glutInitWindowPosition(200, 100);
+	glutInitWindowSize(900, 900);
 
-	windowID = glutCreateWindow("Polyhedron Orthographic Projections: XY, XZ, YZ from left to right and top down");  
+	windowID = glutCreateWindow("Bezier (Left) and B-Spine (Right) Curves");
 	init();
 
-	int scale_menu, rotate_menu, translate_menu, vertex_menu; //For use in graphical menu
-
-        vector<double> v;
-        double num;
-        fstream file;
+        vector<float> v;
+        float num;
+				fstream file;
         file.open("inputFile.txt");
-
         if (!file) {
                 cerr << "Unable to open file\n";
                 exit(ERROR);
@@ -470,61 +479,58 @@ int main(int argc, char** argv)
         while (file >> num)
                 v.push_back(num); //Initial vector for all polygons
         file.close();
-	
-	populatePolyhedronInfo(v); 
-	calculateNormals(); 
-	setNormals(); 
-	setIntensities(lightPt, viewPt, redC, greenC, blueC, K, Ia, Il, n); // Phong 
 
-	
-	//XY
-	windowXY = glutCreateSubWindow(windowID, 25, 50, 320, 320);
+				populateCurves(v);
+
+	//Bez1
+	windowBez1 = glutCreateSubWindow(windowID, 50, 75, 350, 350);
 	init();
 
-	//XZ
-	windowXZ = glutCreateSubWindow(windowID, 25, 450, 320, 320); 
-	init(); 
-
-	//YZ
-	windowYZ = glutCreateSubWindow(windowID, 425, 450, 320, 320); 
+	//Bez2
+	windowBez2 = glutCreateSubWindow(windowID, 50, 475, 350, 350);
 	init();
 
-	
-	glutSetWindow(windowID); 
+	//B1
+	windowB1 = glutCreateSubWindow(windowID, 450, 475, 350, 350);
+	init();
 
-        // Offer the user opportunities to 3D transform! 
-        translate_menu = glutCreateMenu(translateMenu);
-                glutAddMenuEntry("Octahedron/Polyhedron 0", 0);
-                glutAddMenuEntry("Tetrahedron/Polyhedron 1", 1);
-                glutAddMenuEntry("Hexahedron/Polyhedron 2", 2);
+	//B2
+	windowB2 = glutCreateSubWindow(windowID, 450, 75, 350, 350);
+	init();
 
-        scale_menu = glutCreateMenu(scaleMenu);
-                glutAddMenuEntry("Octahedron/Polyhedron 0", 0);
-                glutAddMenuEntry("Tetrahedron/Polyhedron 1", 1);
-                glutAddMenuEntry("Hexahedron/Polyhedron 2", 2);
-
-        rotate_menu = glutCreateMenu(rotateMenu);
-                glutAddMenuEntry("Octahedron/Polyhedron 0", 0);      
-      		glutAddMenuEntry("Tetrahedron/Polyhedron 1", 1);
-                glutAddMenuEntry("Hexahedron/Polyhedron 2", 2);
-	
-	vertex_menu = glutCreateMenu(vertexMenu);
-                glutAddMenuEntry("Octahedron/Polyhedron 0", 0);
-                glutAddMenuEntry("Tetrahedron/Polyhedron 1", 1);
-                glutAddMenuEntry("Hexahedron/Polyhedron 2", 2);
-
+				glutSetWindow(windowBez1);
         glutCreateMenu(mainMenu);
-                glutAddSubMenu("Translate", translate_menu);
-                glutAddSubMenu("Scale", scale_menu);
-                glutAddSubMenu("Rotate", rotate_menu);
-		glutAddSubMenu("Vertex Dump", vertex_menu); 
+								glutAddMenuEntry("Insert Control Point", 0);
+								glutAddMenuEntry("Delete Control Point", 1);
+								glutAddMenuEntry("Modify Control Point", 2);
         glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+			  glutSetWindow(windowBez2);
+				glutCreateMenu(mainMenu);
+								glutAddMenuEntry("Insert Control Point", 3);
+								glutAddMenuEntry("Delete Control Point", 4);
+								glutAddMenuEntry("Modify Control Point", 5);
+				glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+				glutSetWindow(windowB1);
+				glutCreateMenu(mainMenu);
+								glutAddMenuEntry("Insert Control Point", 6);
+								glutAddMenuEntry("Delete Control Point", 7);
+								glutAddMenuEntry("Modify Control Point", 8);
+				glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+				glutSetWindow(windowB2);
+				glutCreateMenu(mainMenu);
+								glutAddMenuEntry("Insert Control Point", 9);
+								glutAddMenuEntry("Delete Control Point", 10);
+								glutAddMenuEntry("Modify Control Point", 11);
+				glutAttachMenu(GLUT_RIGHT_BUTTON);
 
 
         glutDisplayFunc(display);
 
 
-	glutMainLoop(); 
+	glutMainLoop();
 
-	return 0; 
+	return 0;
 }
