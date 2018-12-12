@@ -39,6 +39,7 @@ class BSpline {
 //global variables
 BezSpline bez1, bez2;
 BSpline b1, b2;
+float bez1Res, bez2Res, b1Res, b2Res;
 int windowID, windowBez1, windowBez2, windowB1, windowB2;
 
 /*****************************************************************************/
@@ -49,8 +50,20 @@ int windowID, windowBez1, windowBez2, windowB1, windowB2;
 //Point::Point(float x, float y) : x(x), y(y) {}
 Point::Point(float xVal, float yVal) : x(xVal), y(yVal) {}
 
-void populateCurves(vector<float> v)
+void populateCurves()
 {
+		vector<float> v;
+		float num;
+		fstream file;
+		file.open("inputFile.txt");
+		if (!file) {
+						cerr << "Unable to open file!\n";
+						exit(ERROR);
+		}
+		while (file >> num)
+						v.push_back(num);
+		file.close();
+
 		auto vpoint = v.begin();
 		int bezTotal = (int)*vpoint;
 		if (bezTotal != 2) {
@@ -459,10 +472,15 @@ void mainMenu(int pid)
 
 int main(int argc, char** argv)
 {
-	if (argc != 1) {
-		cout << "Usage: p4\n";
+	if (argc != 5) {
+		cout << "Usage: p4 <bez1Res, bez2Rez, b1Res, b2Res>\n";
 		exit(ERROR);
 	}
+
+	bez1Res = atof(argv[1]);
+	bez2Res = atof(argv[2]);
+	b1Res = atof(argv[3]);
+	b2Res = atof(argv[4]);
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
@@ -472,18 +490,7 @@ int main(int argc, char** argv)
 	windowID = glutCreateWindow("Bezier (Left) and B-Spine (Right) Curves");
 	init();
 
-        vector<float> v;
-        float num;
-				fstream file;
-        file.open("inputFile.txt");
-        if (!file) {
-                cerr << "Unable to open file\n";
-                exit(ERROR);
-        }
-        while (file >> num)
-                v.push_back(num); //Initial vector for all polygons
-        file.close();
-				populateCurves(v);
+	populateCurves();
 
 	//Bez1
 	windowBez1 = glutCreateSubWindow(windowID, 50, 75, 350, 350);
@@ -494,11 +501,11 @@ int main(int argc, char** argv)
 	init();
 
 	//B1
-	windowB1 = glutCreateSubWindow(windowID, 450, 475, 350, 350);
+	windowB1 = glutCreateSubWindow(windowID, 450, 75, 350, 350);
 	init();
 
 	//B2
-	windowB2 = glutCreateSubWindow(windowID, 450, 75, 350, 350);
+	windowB2 = glutCreateSubWindow(windowID, 450, 475, 350, 350);
 	init();
 
 				glutSetWindow(windowBez1);
