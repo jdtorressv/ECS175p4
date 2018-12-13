@@ -2,7 +2,41 @@ Joseph Torres
 996202666
 jdtorres@ucdavis.edu
 
-Instructions:
- 
+General Instructions and Information:
 
- 
+    Type "make" to compile. This program was intended to create two instances of Bezier curves and two instances of B-Spline
+    curves and several design elements reflect this. However, only the Bezier curve portion is working; these will appear on the left
+    side of the primary viewing window. To run, enter "p4" followed by the four desired resolutions of the two Beziers and two
+    B-Splines in the range [0, 1.0]. For example, "p4 0.1 0.1 0.1 0.1".
+
+    The Bezier splines that appear are based on the control points specified in the input file, "inputfile.txt". The control point
+    coordinates lie in the range [-500.0, 500.0] and are normalized in the program. This range can be changed by modifying the #define
+    macro NORM. The Casteljau algorithm is implemented in lines 110-132.
+
+    In addition to the curves, the corresponding control polygon (pink) and x and y axis (blue) will be displayed. Matching control
+    polygons appear on the right, but as stated, the relevant B-Splines were not finished.
+
+Input File Format:
+
+    The first entry is the number of Beziers (fixed at 2). The next two sets of numbers begin with the number of control points followed
+    by the coordinates of the points themselves.
+
+    The next number in the file is the number of B-Splines (fixed at 2). The next two sets of numbers feature the k number (order),
+    the number of control points, and the points themselves.
+
+Bezier Manipulation Instructions: 
+
+    Right clicking on any of the four windows displays a menu to insert, delete, or modify any of that curve's control point. Of course,
+    only the menus of the left side sub-windows will function.
+
+    Choosing insert will cause the terminal to prompt the user for the X and Y coordinates to add the the end of the control point list.
+    These entries are expected to be on the order of [-500.0, 500.0] and will be normalized after input.
+
+    Choosing delete will cause the terminal to present and enumerate the control points as they currently stand, and prompt the user for
+    the number of the control point they would like to delete.
+
+    Choosing modify will also cause the terminal to present and enumerate the control points as they currently stand, and prompt the user
+    for the number of the control point they would like to modify as well as the revised x and y coordinates.
+
+    Any and all changes made via insertion, deletion, or modification will cause the Bezier and B-Spline information to be written to the
+    file "output.txt".

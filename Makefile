@@ -5,4 +5,4 @@ p4: main.o
 main.o: main.cpp  
 	g++ -c main.cpp -lglut -lGL 
 clean:
-	rm -rf *o p4
+	rm -rf *o p4 output.txt
