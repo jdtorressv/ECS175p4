@@ -462,13 +462,44 @@ void insertBezPt(BezSpline& spline)
 			glutSetWindow(windowID);
 			glutPostRedisplay();
 }
-void deleteBezPt(BezSpline spline)
+void deleteBezPt(BezSpline& spline)
 {
+			int index;
+			cout << "This curve is governed by the following control points:\n\n";
+			for (int i = 0; i < spline.pointArr.size(); i++) {
+					cout << i+1 <<"	(" << spline.pointArr.at(i).x * NORM << ", " << spline.pointArr.at(i).y * NORM << ")\n";
+			}
+			cout << "\nPlease enter the number of the point you'd like removed:\n";
+			cin >> index;
+			index--;
+			vector<Point> temp;
+			for (int i = 0; i < spline.pointArr.size(); i++) {
+					if (i != index)
+					temp.push_back(spline.pointArr.at(i));
+			}
+			spline.pointArr.clear();
+			for (int i = 0; i < temp.size(); i++) {
+					spline.pointArr.push_back(temp.at(i));
+			}
+			glutSetWindow(windowID);
+			glutPostRedisplay();
 
 }
-void modifyBezPt(BezSpline spline)
+void modifyBezPt(BezSpline& spline)
 {
-
+			int index;
+			float xVal, yVal;
+			cout << "This curve is governed by the following control points:\n\n";
+			for (int i = 0; i < spline.pointArr.size(); i++) {
+					cout << i+1 <<"	(" << spline.pointArr.at(i).x * NORM << ", " << spline.pointArr.at(i).y * NORM << ")\n";
+			}
+			cout << "\nPlease enter the number of the point you'd like to modify, followed by the new x and y coordinates:\n";
+			cin >> index >> xVal >> yVal;
+			index--;
+			spline.pointArr.at(index).x = xVal / NORM;
+			spline.pointArr.at(index).y = yVal / NORM;
+			glutSetWindow(windowID);
+			glutPostRedisplay();
 }
 
 void mainMenu(int pid)
