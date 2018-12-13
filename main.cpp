@@ -120,20 +120,27 @@ void casteljau(BezSpline spline, float resolution)
 		glBegin(GL_POINTS);
 
 				Point currPt(0, 0);
-				float t = 0;
-				while (t <= 1.0)
+				for (float t = 0; t <= 1.0; t += resolution)
 				{
 					currPt = getNextCastelPt(spline.pointArr.size() - 1, 0, t, spline);
 					glVertex2f(currPt.x, currPt.y);
-					t += resolution;
 				}
 
 		glEnd();
+}
+//Initializes each of the subwindows as well as the primary window
+void init()
+{
+	if (glutGetWindow() == windowID)
+			glClearColor(1.0, 1.0, 1.0, 0.0); //Set color to white
+	else
+      glClearColor(0.0, 0.0, 0.0, 0.0); //Set color to black
 
-		glFlush();
+  glMatrixMode(GL_PROJECTION);
 }
 
-void cntrlPolyBez1()
+
+void drawSceneBez1()
 {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glLoadIdentity();
@@ -146,10 +153,6 @@ void cntrlPolyBez1()
 				glVertex2f(0,-1);
 				glVertex2f(0,1);
 
-		glEnd();
-
-		glBegin(GL_LINES);
-
 				glColor3f(.96, .38, .53);
 				for (int i = 0; i < bez1.pointArr.size()-1; i++) {
 						glVertex2f(bez1.pointArr.at(i).x, bez1.pointArr.at(i).y);
@@ -157,10 +160,14 @@ void cntrlPolyBez1()
 				}
 
 		glEnd();
-
+		for (int i = 0; i < bez1.pointArr.size(); i++) {
+				cout << bez1.pointArr.at(i).x << " " << bez1.pointArr.at(i).y << endl;
+		}
+		casteljau(bez1, bez1Res);
 		glFlush();
 }
-void cntrlPolyBez2()
+//
+void drawSceneBez2()
 {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glLoadIdentity();
@@ -172,11 +179,6 @@ void cntrlPolyBez2()
 			glVertex2f(1,0);
 			glVertex2f(0,-1);
 			glVertex2f(0,1);
-
-
-		glEnd();
-
-		glBegin(GL_LINES);
 
 		glColor3f(.96, .38, .53);
 		for (int i = 0; i < bez2.pointArr.size()-1; i++) {
@@ -185,9 +187,11 @@ void cntrlPolyBez2()
 		}
 
 		glEnd();
+		casteljau(bez2, bez2Res);
 		glFlush();
 }
-void cntrlPolyB1()
+//
+void drawSceneB1()
 {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glLoadIdentity();
@@ -199,11 +203,6 @@ void cntrlPolyB1()
 			glVertex2f(1,0);
 			glVertex2f(0,-1);
 			glVertex2f(0,1);
-
-
-		glEnd();
-
-		glBegin(GL_LINES);
 
 		glColor3f(.96, .38, .53);
 		for (int i = 0; i < b1.pointArr.size()-1; i++) {
@@ -213,7 +212,8 @@ void cntrlPolyB1()
 		glEnd();
 		glFlush();
 }
-void cntrlPolyB2()
+
+void drawSceneB2()
 {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glLoadIdentity();
@@ -226,11 +226,6 @@ void cntrlPolyB2()
 			glVertex2f(0,-1);
 			glVertex2f(0,1);
 
-
-		glEnd();
-
-		glBegin(GL_LINES);
-
 		glColor3f(.96, .38, .53);
 		for (int i = 0; i < b2.pointArr.size()-1; i++) {
 				glVertex2f(b2.pointArr.at(i).x, b2.pointArr.at(i).y);
@@ -239,42 +234,6 @@ void cntrlPolyB2()
 
 		glEnd();
 		glFlush();
-}
-
-//Initializes each of the subwindows as well as the primary window
-void init()
-{
-	if (glutGetWindow() == windowID)
-			glClearColor(1.0, 1.0, 1.0, 0.0); //Set color to white
-	else
-      glClearColor(0.0, 0.0, 0.0, 0.0); //Set color to black
-
-  glMatrixMode(GL_PROJECTION);
-}
-
-//Draws the lines as specified by the lines via vertex pairs in the input file; XY: All Z values are ignored
-void drawSceneBez1()
-{
-		casteljau(bez1, bez1Res);
-}
-//Draws the lines as specified by the lines via vertex pairs in the input file; XZ: All Y values are ignored
-void drawSceneBez2()
-{
-		casteljau(bez2, bez2Res);
-}
-//Draws the lines as specified by the lines via vertex pairs in the input file; XZ: All Y values are ignored
-void drawSceneB1()
-{
-
-
-
-}
-
-void drawSceneB2()
-{
-
-
-
 }
 //Set up main display
 void background()
@@ -286,24 +245,19 @@ void background()
 //Master display function
 void display()
 {
-				cout << "I'm being called!\n";
 				glutSetWindow(windowID);
 				background();
 
         glutSetWindow(windowBez1);
-				cntrlPolyBez1();
         drawSceneBez1();
 
         glutSetWindow(windowBez2);
-				cntrlPolyBez2();
         drawSceneBez2();
 
         glutSetWindow(windowB1);
-				cntrlPolyB1();
         drawSceneB1();
 
 				glutSetWindow(windowB2);
-				cntrlPolyB2();
 				drawSceneB2();
 }
 /*
@@ -493,7 +447,7 @@ void rotateMenu(int pid)
                         file << lArr.at(i).at(k) << " " << lArr.at(i).at(k+1) << '\n';
         }
 }*/
-void insertBezPt(BezSpline spline)
+void insertBezPt(BezSpline& spline)
 {
 			float xVal;
 			float yVal;
@@ -505,7 +459,7 @@ void insertBezPt(BezSpline spline)
 			}
 			Point pt(xVal / NORM, yVal / NORM);
 			spline.pointArr.push_back(pt);
-
+			glutSetWindow(windowID);
 			glutPostRedisplay();
 }
 void deleteBezPt(BezSpline spline)
@@ -559,7 +513,9 @@ void mainMenu(int pid)
 							break;
 		}
 }
-
+/*****************************************************************************/
+/* Main Function                                                             */
+/*****************************************************************************/
 int main(int argc, char** argv)
 {
 	if (argc != 5) {
@@ -626,7 +582,7 @@ int main(int argc, char** argv)
 					glutAddMenuEntry("Modify Control Point", 11);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-
+	glutSetWindow(windowID);
   glutDisplayFunc(display);
 
 	glutMainLoop();
